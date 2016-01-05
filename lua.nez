@@ -18,24 +18,26 @@ stat =  (';') /
 	 ('local function'#Localfunction Name funcbody )/
 	 ('local'#Local namelist ('=' explist)?)
 
-retstat ::= return [explist] [‘;’]
 
-label ::= ‘::’ Name ‘::’
+retstat = return $(explist)? ';'?
 
-funcname ::= Name {‘.’ Name} [‘:’ Name]
+label = '::' Name '::'
 
-varlist ::= var {‘,’ var}
+funcname = Name ('.' $(Name))* (':' $(Name))?
 
-var ::=  Name | prefixexp ‘[’ exp ‘]’ | prefixexp ‘.’ Name
 
-namelist ::= Name {‘,’ Name}
+varlist = var (',' $(var))*
 
-explist ::= exp {‘,’ exp}
+var =  Name / (prefixexp '[' $(exp) ']') / (prefixexp '.' $(Name))
 
-exp ::=  nil | false | true | Numeral | LiteralString | ‘...’ | functiondef |
-	 prefixexp | tableconstructor | exp binop exp | unop exp
+namelist = Name (',' $(Name))*
 
-prefixexp ::= var | functioncall | ‘(’ exp ‘)’
+explist = exp (',' $(exp))*
+
+exp =  nil / false / true / Numeral / LiteralString / '...' / functiondef /
+	 prefixexp / tableconstructor / (exp $(binop) $(exp)) / (unop $(exp))
+
+prefixexp = var / functioncall / ('(' $(exp) ')')
 
 functioncall =  prefixexp args / prefixexp ':' Name args
 
@@ -66,3 +68,7 @@ unop = '-' / not / '#' / '~'
 and = {'and' #And}
 or = {'or' #Or}
 not = {'not' #Not}
+nil = {'nil' #Nil}
+false = {'false' #False}
+true = {'true' #True}
+return = {'return' #Return}
