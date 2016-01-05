@@ -1,26 +1,25 @@
 chunk = block
 
-block = stat* retstat?
+block = {stat}* {retstat}?
 
-stat =  (';') /
-	 (varlist '=' explist) /
+stat =  ';' /
+	 {varlist '=' explist} /
 	 functioncall /
 	 label /
-	 ('break' #Break)/
-	 ('goto'#Goto  Name )/
-	 ('do'#Do block 'end'#End )/
-	 ('while'#While exp 'do'#Do block 'end'#End )/
-	 ('repeat'#Repeat block 'until'#Until exp )/
-	 ('if'#Until exp 'then'#Then block ('elseif'#Elseif exp 'then'#Then block)* ('else'#Else block)? end )/
-	 ('for'#For Name '=' exp ',' exp (',' exp)? 'do'#Do block 'end'#End )/
-	 ('for'#For namelist 'in'#In explist 'do'#Do block 'end'#End )/
-	 ('function'#Function funcname funcbody )/
-	 ('local function'#Localfunction Name funcbody )/
-	 ('local'#Local namelist ('=' explist)?)
-
+	 {'break' #Break}/
+	 {'goto'#Goto  $(Name) }/
+	 {'do'#Do $(block) 'end' }/
+	 {'while'#While $(exp) 'do' $(block) 'end' }/
+	 {'repeat'#Repeat $(block) 'until' $(exp) }/
+	 {'if'#Until $(exp) 'then' $(block) $({'elseif'#Elseif $(exp) 'then' $(block)}*) {'else' $(block)}? 'end' }/
+	 {'for'#For $(Name) '=' $(exp) ',' $(exp) {',' $(exp)}? 'do' $(block) 'end'}/
+	 {'for'#For $(namelist) 'in' $(explist) 'do' $(block) 'end' }/
+	 {'function'#Function $(funcname) $(funcbody) }/
+	 {'local function'#Localfunction $(Name) $(funcbody) }/
+	 {'local'#Local $(namelist) {'=' $(explist)}?}
+Name = {[a-z]/[0-9]/'_'}+ #Name
 
 retstat = return $(explist)? ';'?
-
 label = '::' Name '::'
 
 funcname = Name ('.' $(Name))* (':' $(Name))?
