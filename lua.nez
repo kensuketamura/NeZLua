@@ -1,23 +1,23 @@
-chunk ::= block
+chunk = block
 
-block ::= {stat} [retstat]
+block = stat* retstat?
 
-stat ::=  ‘;’ |
-	 varlist ‘=’ explist |
-	 functioncall |
-	 label |
-	 break |
-	 goto Name |
-	 do block end |
-	 while exp do block end |
-	 repeat block until exp |
-	 if exp then block {elseif exp then block} [else block] end | 
-	 for Name ‘=’ exp ‘,’ exp [‘,’ exp] do block end |
-	 for namelist in explist do block end |
-	 function funcname funcbody |
-	 local function Name funcbody |
-	 local namelist [‘=’ explist]
-
+stat =  (';') /
+	 (varlist '=' explist) /
+	 functioncall /
+	 label /
+	 ('break' #Break)/
+	 ('goto'#Goto  Name )/
+	 ('do'#Do block 'end'#End )/
+	 ('while'#While exp 'do'#Do block 'end'#End )/
+	 ('repeat'#Repeat block 'until'#Until exp )/
+	 ('if'#Until exp 'then'#Then block ('elseif'#Elseif exp 'then'#Then block)* ('else'#Else block)? end )/
+	 ('for'#For Name '=' exp ',' exp (',' exp)? 'do'#Do block 'end'#End )/
+	 ('for'#For namelist 'in'#In explist 'do'#Do block 'end'#End )/
+	 ('function'#Function funcname funcbody )/
+	 ('local function'#Localfunction Name funcbody )/
+	 ('local'#Local namelist ('=' explist)?)
+/*
 retstat ::= return [explist] [‘;’]
 
 label ::= ‘::’ Name ‘::’
@@ -61,3 +61,4 @@ binop ::=  ‘+’ | ‘-’ | ‘*’ | ‘/’ | ‘//’ | ‘^’ | ‘%’ 
 	 and | or
 
 unop ::= ‘-’ | not | ‘#’ | ‘~’
+*/
