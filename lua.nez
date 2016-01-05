@@ -17,7 +17,7 @@ stat =  (';') /
 	 ('function'#Function funcname funcbody )/
 	 ('local function'#Localfunction Name funcbody )/
 	 ('local'#Local namelist ('=' explist)?)
-/*
+
 retstat ::= return [explist] [‘;’]
 
 label ::= ‘::’ Name ‘::’
@@ -37,28 +37,32 @@ exp ::=  nil | false | true | Numeral | LiteralString | ‘...’ | functiondef 
 
 prefixexp ::= var | functioncall | ‘(’ exp ‘)’
 
-functioncall ::=  prefixexp args | prefixexp ‘:’ Name args
+functioncall =  prefixexp args / prefixexp ':' Name args
 
-args ::=  ‘(’ [explist] ‘)’ | tableconstructor | LiteralString
+args =  '(' (explist)? ')' / tableconstructor / LiteralString
 
-functiondef ::= function funcbody
+functiondef = function funcbody
 
-funcbody ::= ‘(’ [parlist] ‘)’ block end
+funcbody = '(' {$ parlist}? ')' block end
 
-parlist ::= namelist [‘,’ ‘...’] | ‘...’
+parlist = namelist {',' '...'}? / '...'
 
-tableconstructor ::= ‘{’ [fieldlist] ‘}’
+tableconstructor = '{' {$ fieldlist}? '}'
 
-fieldlist ::= field {fieldsep field} [fieldsep]
+fieldlist = field {fieldsep field} (fieldsep)?
 
-field ::= ‘[’ exp ‘]’ ‘=’ exp | Name ‘=’ exp | exp
+field = '[' exp ']' '=' exp / Name '=' exp / exp
 
-fieldsep ::= ‘,’ | ‘;’
+fieldsep = ',' / ';'
 
-binop ::=  ‘+’ | ‘-’ | ‘*’ | ‘/’ | ‘//’ | ‘^’ | ‘%’ |
-	 ‘&’ | ‘~’ | ‘|’ | ‘>>’ | ‘<<’ | ‘..’ |
-	 ‘<’ | ‘<=’ | ‘>’ | ‘>=’ | ‘==’ | ‘~=’ |
-	 and | or
+binop =  '+' #Add / '-' #Sub / '*' #Mul / '/' #Div / '//' / '^' / '%' /
+	 '&' / '~' / '/' / '>>' / '<<' / '..' /
+	 '<' #LessThan / '<=' #LessThanEquals / '>' #GreaterThan / '>=' #GreaterThanEquals /
+	 '==' #Equals / '!=' #NotEquals /
+	 and / or
 
-unop ::= ‘-’ | not | ‘#’ | ‘~’
-*/
+unop = '-' / not / '#' / '~'
+
+and = {'and' #And}
+or = {'or' #Or}
+not = {'not' #Not}
