@@ -1,8 +1,30 @@
+chunk = block
+
+block = stat* retstat?
+
+stat =  (';') /
+	 (varlist '=' explist) /
+	 functioncall /
+	 label /
+	 ('break' #Break)/
+	 ('goto'#Goto  Name )/
+	 ('do'#Do block 'end'#End )/
+	 ('while'#While exp 'do'#Do block 'end'#End )/
+	 ('repeat'#Repeat block 'until'#Until exp )/
+	 ('if'#Until exp 'then'#Then block ('elseif'#Elseif exp 'then'#Then block)* ('else'#Else block)? end )/
+	 ('for'#For Name '=' exp ',' exp (',' exp)? 'do'#Do block 'end'#End )/
+	 ('for'#For namelist 'in'#In explist 'do'#Do block 'end'#End )/
+	 ('function'#Function funcname funcbody )/
+	 ('local function'#Localfunction Name funcbody )/
+	 ('local'#Local namelist ('=' explist)?)
+
+
 retstat = return $(explist)? ';'?
 
 label = '::' Name '::'
 
 funcname = Name ('.' $(Name))* (':' $(Name))?
+
 
 varlist = var (',' $(var))*
 
@@ -17,12 +39,36 @@ exp =  nil / false / true / Numeral / LiteralString / '...' / functiondef /
 
 prefixexp = var / functioncall / ('(' $(exp) ')')
 
+functioncall =  prefixexp args / prefixexp ':' Name args
 
+args =  '(' (explist)? ')' / tableconstructor / LiteralString
 
+functiondef = function funcbody
+
+funcbody = '(' {$ parlist}? ')' block end
+
+parlist = namelist {',' '...'}? / '...'
+
+tableconstructor = '{' {$ fieldlist}? '}'
+
+fieldlist = field {fieldsep field} (fieldsep)?
+
+field = '[' exp ']' '=' exp / Name '=' exp / exp
+
+fieldsep = ',' / ';'
+
+binop =  '+' #Add / '-' #Sub / '*' #Mul / '/' #Div / '//' / '^' / '%' /
+	 '&' / '~' / '/' / '>>' / '<<' / '..' /
+	 '<' #LessThan / '<=' #LessThanEquals / '>' #GreaterThan / '>=' #GreaterThanEquals /
+	 '==' #Equals / '!=' #NotEquals /
+	 and / or
+
+unop = '-' / not / '#' / '~'
+
+and = {'and' #And}
+or = {'or' #Or}
+not = {'not' #Not}
 nil = {'nil' #Nil}
-
 false = {'false' #False}
-
 true = {'true' #True}
-
 return = {'return' #Return}
