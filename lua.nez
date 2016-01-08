@@ -1,68 +1,80 @@
 chunk = block
-
-block = {stat}* {retstat}?
+block = { $(stat)* $(retstat)? #Block}
 
 stat =  ';' /
-	 {varlist '=' explist} /
+	 varlist '=' $(explist) /
 	 functioncall /
 	 label /
 	 {'break' #Break}/
-	 {'goto'#Goto  $(Name) }/
-	 {'do'#Do $(block) 'end' }/
-	 {'while'#While $(exp) 'do' $(block) 'end' }/
-	 {'repeat'#Repeat $(block) 'until' $(exp) }/
-	 {'if'#Until $(exp) 'then' $(block) $({'elseif'#Elseif $(exp) 'then' $(block)}*) {'else' $(block)}? 'end' }/
-	 {'for'#For $(Name) '=' $(exp) ',' $(exp) {',' $(exp)}? 'do' $(block) 'end'}/
-	 {'for'#For $(namelist) 'in' $(explist) 'do' $(block) 'end' }/
-	 {'function'#Function $(funcname) $(funcbody) }/
-	 {'local function'#Localfunction $(Name) $(funcbody) }/
-	 {'local'#Local $(namelist) {'=' $(explist)}?}
-Name = {[a-z]/[0-9]/'_'}+ #Name
+	 {'goto' #Goto  $(Name) }/
+	 {'do' #Do  $(block) 'end' }/
+	 {'while' #While $(exp) 'do' $(block) 'end' }/
+	 {'repeat' #Repeat $(block) 'until' $(exp) }/
+	 {'if' #Until $(exp) 'then' $(block) {$ 'elseif'#Elseif $(exp) 'then' $(block)}* {$ 'else' $(block)}? 'end' }/
+	 {'for' #For $(Name) '=' $(exp) ',' $(exp) {$ ',' $(exp)}? 'do' $(block) 'end'}/
+	 {'for' #For $(namelist) 'in' $(explist) 'do' $(block) 'end' }/
+	 {'function' #Function $(funcname) $(funcbody) }/
+	 {'local function' #Localfunction $(Name) $(funcbody) }/
+	 {'local' #Local $(namelist) {$ '=' $(explist)}?}
 
 retstat = return $(explist)? ';'?
+
 label = '::' Name '::'
 
 funcname = Name ('.' $(Name))* (':' $(Name))?
 
-
 varlist = var (',' $(var))*
 
 var =  Name / (prefixexp '[' $(exp) ']') / (prefixexp '.' $(Name))
+//var =  { ($(Name) / $(prefixexp_novar) ( '[' $(exp) ']' /  '.' $(Name) )+) #Var}
+//var_nofunc = Name / '(' exp ')' ( '[' $(exp) ']' /  '.' $(Name) )+
 
-namelist = Name (',' $(Name))*
+namelist = Name {$ ',' $(Name) #Namelist}*
 
 explist = exp (',' $(exp))*
 
+/*
 exp =  nil / false / true / Numeral / LiteralString / '...' / functiondef /
 	 prefixexp / tableconstructor / (exp $(binop) $(exp)) / (unop $(exp))
+ */
+exp =  ( nil / false / true / Numeral / LiteralString / '...' / functiondef /
+  prefixexp / tableconstructor / (unop $(exp)) )  ( $(binop) $(exp))*
 
-prefixexp = var / functioncall / ('(' $(exp) ')')
+//prefixexp = var / functioncall / '(' exp ')'
+prefixexp = ( Name / '(' exp ')' ) ( '[' $(exp) ']' / $(Name) / $(args) / ':' $(Name) $(args) )*
 
-functioncall =  prefixexp args / prefixexp ':' Name args
+functioncall =  prefixexp $(args) / prefixexp ':' $(Name) $(args)
+//functioncall =  var_nofunc ( $(args) /  ':' $(Name) $(args) )+
+//functioncall_novar =  '(' exp ')' ( $(args) /  ':' $(Name) $(args) )+
 
-args =  '(' (explist)? ')' / tableconstructor / LiteralString
+args =  {('(' $(explist)? ')' / $(tableconstructor) / $(LiteralString)) #Args}
 
-functiondef = function funcbody
+functiondef = 'function' funcbody
 
-funcbody = '(' {$ parlist}? ')' block end
+funcbody = {'(' $(parlist) ')' $(block) 'end' #Funcbody}
 
-parlist = namelist {',' '...'}? / '...'
+parlist = namelist (',' '...')? / '...'
 
-tableconstructor = '{' {$ fieldlist}? '}'
+tableconstructor = {'{' $(fieldlist)? '}' #Tableconstructor}
 
-fieldlist = field {fieldsep field} (fieldsep)?
+fieldlist = field ( fieldsep $(field))*  fieldsep?
 
-field = '[' exp ']' '=' exp / Name '=' exp / exp
+field = '[' exp ']' '=' $(exp) / Name '=' $(exp) / exp
 
 fieldsep = ',' / ';'
 
-binop =  '+' #Add / '-' #Sub / '*' #Mul / '/' #Div / '//' / '^' / '%' /
+binop =  {'+' #Add} / {'-' #Sub} / {'*' #Mul} / {'/' #Div} / '//' / '^' / '%' /
 	 '&' / '~' / '/' / '>>' / '<<' / '..' /
-	 '<' #LessThan / '<=' #LessThanEquals / '>' #GreaterThan / '>=' #GreaterThanEquals /
-	 '==' #Equals / '!=' #NotEquals /
+	 {'<' #LessThan} / {'<=' #LessThanEquals} / {'>' #GreaterThan} / {'>=' #GreaterThanEquals} /
+	 {'==' #Equals} / {'!=' #NotEquals} /
 	 and / or
 
 unop = '-' / not / '#' / '~'
+
+Name = {([0-9] / [a-z] / '_')+ #Name}
+Numeral = {([1-9] [0-9]* / '0') #Numeral}
+LiteralString = {('"' $(Name) '"' / '\'' $(char) '\'') #LiteralString}
+char = {([0-9] / [a-z] / '_') #Char}
 
 and = {'and' #And}
 or = {'or' #Or}
