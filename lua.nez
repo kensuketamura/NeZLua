@@ -33,10 +33,10 @@ namelist = Name {$ ',' $(Name) #Namelist}*
 
 explist = exp (',' $(exp))*
 
-/*
-exp =  nil / false / true / Numeral / LiteralString / '...' / functiondef /
-	 prefixexp / tableconstructor / (exp $(binop) $(exp)) / (unop $(exp))
- */
+
+//exp =  nil / false / true / Numeral / LiteralString / '...' / functiondef /
+//	 prefixexp / tableconstructor / (exp $(binop) $(exp)) / (unop $(exp))
+
 exp =  ( nil / false / true / Numeral / LiteralString / '...' / functiondef /
   prefixexp / tableconstructor / (unop $(exp)) )  ( $(binop) $(exp))*
 
