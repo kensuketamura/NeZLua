@@ -2,50 +2,46 @@ chunk = block
 block = { $(stat)* $(retstat)? #Block}
 
 stat =  ';' /
-	 varlist '=' $(explist) /
+	 {$(varlist) _ '=' _ $(explist) #Varcall} /
 	 functioncall /
 	 label /
 	 {'break' #Break}/
-	 {'goto' #Goto  $(Name) }/
-	 {'do' #Do  $(block) 'end' }/
-	 {'while' #While $(exp) 'do' $(block) 'end' }/
-	 {'repeat' #Repeat $(block) 'until' $(exp) }/
-	 {'if' #Until $(exp) 'then' $(block) {$ 'elseif'#Elseif $(exp) 'then' $(block)}* {$ 'else' $(block)}? 'end' }/
-	 {'for' #For $(Name) '=' $(exp) ',' $(exp) {$ ',' $(exp)}? 'do' $(block) 'end'}/
-	 {'for' #For $(namelist) 'in' $(explist) 'do' $(block) 'end' }/
-	 {'function' #Function $(funcname) $(funcbody) }/
-	 {'local function' #Localfunction $(Name) $(funcbody) }/
-	 {'local' #Local $(namelist) {$ '=' $(explist)}?}
+	 {'goto' #Goto _ $(Name) }/
+	 {'do' #Do _ $(block) _ 'end' }/
+	 {'while' #While _ $(exp) _ 'do' _ $(block) _ 'end' }/
+	 {'repeat' #Repeat _ $(block) _ 'until' _ $(exp) }/
+	 {'if' #Until _ $(exp) _ 'then' _ $(block) {$ _ 'elseif' #Elseif _ $(exp) _ 'then' _ $(block)}* {$ _ 'else' _ $(block)}? _ 'end' }/
+	 {'for' #For _ $(Name) _ '=' _ $(exp) _ ',' _ $(exp) {$ _ ',' _ $(exp)}? _ 'do' _ $(block) _ 'end'}/
+	 {'for' #For _ $(namelist) _ 'in' _ $(explist) _ 'do' _ $(block) _ 'end' }/
+	 {'function' #Function _ $(funcname) _ $(funcbody) }/
+	 {'local function' #Localfunction _ $(Name) _ $(funcbody) }/
+	 {'local' #Local _ $(namelist) {$ _ '=' _ $(explist)}?}
 
 retstat = return $(explist)? ';'?
 
-label = '::' Name '::'
+label = {'::' $(Name) '::' #Label}
 
-funcname = Name ('.' $(Name))* (':' $(Name))?
+funcname =  Name {$ _ '.' _ $(Name) #Funcname}* (':' $(Name))?
 
-varlist = var (',' $(var))*
+varlist = var {$ _ ',' _ $(var) #Varlist}*
 
 var =  Name / (prefixexp '[' $(exp) ']') / (prefixexp '.' $(Name))
-//var =  { ($(Name) / $(prefixexp_novar) ( '[' $(exp) ']' /  '.' $(Name) )+) #Var}
-//var_nofunc = Name / '(' exp ')' ( '[' $(exp) ']' /  '.' $(Name) )+
 
-namelist = Name {$ ',' $(Name) #Namelist}*
+namelist =  Name {$ _ ',' _ $(Name) #Namelist}*
 
-explist = exp (',' $(exp))*
+explist =  exp {$ _ ',' _ $(exp) #Explist}*
 
 /*
 exp =  nil / false / true / Numeral / LiteralString / '...' / functiondef /
 	 prefixexp / tableconstructor / (exp $(binop) $(exp)) / (unop $(exp))
  */
-exp =  ( nil / false / true / Numeral / LiteralString / '...' / functiondef /
-  prefixexp / tableconstructor / (unop $(exp)) )  ( $(binop) $(exp))*
+exp = ( nil / false / true / Numeral / LiteralString / '...' / functiondef /
+  prefixexp / tableconstructor / { $(unop) _ $(exp) #Unop} )  {$ _ $(binop) _ $(exp) #Binop}?
 
 //prefixexp = var / functioncall / '(' exp ')'
-prefixexp = ( Name / '(' exp ')' ) ( '[' $(exp) ']' / $(Name) / $(args) / ':' $(Name) $(args) )*
+prefixexp = { ( $(Name) / '(' $(exp) ')' ) ( '[' $(exp) ']' / $(Name) / $(args) / ':' $(Name) $(args) )* #Prefixexp}
 
-functioncall =  prefixexp $(args) / prefixexp ':' $(Name) $(args)
-//functioncall =  var_nofunc ( $(args) /  ':' $(Name) $(args) )+
-//functioncall_novar =  '(' exp ')' ( $(args) /  ':' $(Name) $(args) )+
+functioncall =  { $(prefixexp) $(args) / $(prefixexp) ':' $(Name) $(args) #Functioncall}
 
 args =  {('(' $(explist)? ')' / $(tableconstructor) / $(LiteralString)) #Args}
 
@@ -53,25 +49,25 @@ functiondef = 'function' funcbody
 
 funcbody = {'(' $(parlist) ')' $(block) 'end' #Funcbody}
 
-parlist = namelist (',' '...')? / '...'
+parlist = namelist _ (',' '...')? / '...'
 
 tableconstructor = {'{' $(fieldlist)? '}' #Tableconstructor}
 
-fieldlist = field ( fieldsep $(field))*  fieldsep?
+fieldlist = { $(field) ( fieldsep $(field))*  fieldsep? #Fieldlist}
 
-field = '[' exp ']' '=' $(exp) / Name '=' $(exp) / exp
+field = '[' _ exp _ ']' _ '=' _ $(exp) / Name _ '=' _ $(exp) / exp
 
 fieldsep = ',' / ';'
 
 binop =  {'+' #Add} / {'-' #Sub} / {'*' #Mul} / {'/' #Div} / '//' / '^' / '%' /
+	{'<=' #LessThanEquals} / {'<' #LessThan} / {'>=' #GreaterThanEquals} / {'>' #GreaterThan} /
 	 '&' / '~' / '/' / '>>' / '<<' / '..' /
-	 {'<' #LessThan} / {'<=' #LessThanEquals} / {'>' #GreaterThan} / {'>=' #GreaterThanEquals} /
 	 {'==' #Equals} / {'!=' #NotEquals} /
 	 and / or
 
 unop = '-' / not / '#' / '~'
 
-Name = {([0-9] / [a-z] / '_')+ #Name}
+Name = {([0-9] / [a-z] / [A-Z] / '_')+ #Name}
 Numeral = {([1-9] [0-9]* / '0') #Numeral}
 LiteralString = {('"' $(Name) '"' / '\'' $(char) '\'') #LiteralString}
 char = {([0-9] / [a-z] / '_') #Char}
@@ -83,3 +79,6 @@ nil = {'nil' #Nil}
 false = {'false' #False}
 true = {'true' #True}
 return = {'return' #Return}
+
+S = [ \t\n\r]
+_ = S*
