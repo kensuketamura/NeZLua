@@ -1,79 +1,83 @@
-chunk = block
-block = { $(stat)* $(retstat)? #Block}
+chunk = { ( _ ($(stat) / ';') )* $(retstat)? #Source}
+block = { ( _ ($(stat) / ';') )* $(retstat)? #Block}
 
-stat =  ';' /
-	 {$(varlist) _ '=' _ $(explist) #Varcall} /
-	 functioncall /
+stat =
+	 { $left(varlist) _ '=' _ $right(explist) #Assign} /
+	  functioncall /
 	 label /
 	 {'break' #Break}/
-	 {'goto' #Goto _ $(Name) }/
-	 {'do' #Do _ $(block) _ 'end' }/
-	 {'while' #While _ $(exp) _ 'do' _ $(block) _ 'end' }/
-	 {'repeat' #Repeat _ $(block) _ 'until' _ $(exp) }/
-	 {'if' #Until _ $(exp) _ 'then' _ $(block) {$ _ 'elseif' #Elseif _ $(exp) _ 'then' _ $(block)}* {$ _ 'else' _ $(block)}? _ 'end' }/
-	 {'for' #For _ $(Name) _ '=' _ $(exp) _ ',' _ $(exp) {$ _ ',' _ $(exp)}? _ 'do' _ $(block) _ 'end'}/
-	 {'for' #For _ $(namelist) _ 'in' _ $(explist) _ 'do' _ $(block) _ 'end' }/
-	 {'function' #Function _ $(funcname) _ $(funcbody) }/
-	 {'local function' #Localfunction _ $(Name) _ $(funcbody) }/
-	 {'local' #Local _ $(namelist) {$ _ '=' _ $(explist)}?}
+	 {'goto' #Goto indent $(Name) }/
+	 {'do' #Do indent $(block) indent 'end' }/
+	 {'while' #While indent $(exp) indent 'do' indent $(block) indent 'end' }/
+	 {'repeat' #Repeat indent $(block) indent 'until' indent $(exp) }/
+	 if indent 'end' /
+	 {'for' #For1 indent $(Name) _ '=' _ $(exp) _ ',' _ $(exp) ( _ ',' _ $(exp))? indent 'do' indent $(block) indent 'end'}/
+	 {'for' #For2 indent $(namelist) indent 'in' indent $(explist) indent 'do' indent $(block) indent 'end' }/
+	 {'function' #FuncDecl indent $name(funcname) _ funcbody }/
+	 {'local function' #Localfunction indent $name(Name) _ funcbody }/
+	 {'local' #Local indent $(namelist) {$ _ '=' _ $(explist)}?}
+
+if = {'if' #If (indent $(exp) indent / '(' $(exp) ')' _ ) 'then' indent $(block) ( indent 'else' ( $(if) /  indent $(block)) )?}
 
 retstat = return $(explist)? ';'?
 
 label = {'::' $(Name) '::' #Label}
 
-funcname =  Name {$ _ '.' _ $(Name) #Funcname}* (':' $(Name))?
+funcname =  Name {$ '.' $(Name) #Funcname}* (':' $(Name))?
 
-varlist = var {$ _ ',' _ $(var) #Varlist}*
+funcbody = '(' $param(parlist) ')' indent $body(block) indent 'end'
+
+varlist = var {$left _ ',' _ $right(var) #Varlist}*
 
 var =  Name / (prefixexp '[' $(exp) ']') / (prefixexp '.' $(Name))
 
-namelist =  Name {$ _ ',' _ $(Name) #Namelist}*
+namelist = { $(param)  _ (',' _ $(param))* #List}
 
-explist =  exp {$ _ ',' _ $(exp) #Explist}*
+param = { $name(Name) #Param}
 
-/*
-exp =  nil / false / true / Numeral / LiteralString / '...' / functiondef /
-	 prefixexp / tableconstructor / (exp $(binop) $(exp)) / (unop $(exp))
- */
-exp = ( nil / false / true / Numeral / LiteralString / '...' / functiondef /
-  prefixexp / tableconstructor / { $(unop) _ $(exp) #Unop} )  {$ _ $(binop) _ $(exp) #Binop}?
+explist =  exp {$left _ ',' _ $right(exp) #Explist}*
 
-//prefixexp = var / functioncall / '(' exp ')'
-prefixexp = { ( $(Name) / '(' $(exp) ')' ) ( '[' $(exp) ']' / $(Name) / $(args) / ':' $(Name) $(args) )* #Prefixexp}
+exp = exp1 {$left ( _ 'or' #Or _ $right(exp1)) }*
+exp1 = exp2 {$left ( _ 'and' #And _ $right(exp2)) }*
+exp2 = exp3 {$left ( _ ('==' #Equals / '!=' #NotEquals) _ $right(exp3)) }*
+exp3 = exp4 {$left ( _ ('<=' #LessThanEquals / '<' #LessThan / '>=' #GreaterThanEquals / '>' #GreaterThan) _ $right(exp4)) }*
+exp4 = exp5 {$left ( _ '|' #Bit_Or _ $right(exp5)) }*
+exp5 = exp6 {$left ( _ '~' #Bit_Exor _ $right(exp6)) }*
+exp6 = exp7 {$left ( _ '&' #Bit_And _ $right(exp7)) }*
+exp7 = exp8 {$left ( _ ('<<' #Left_shift / '>>' #Right_shift) _ $right(exp8)) }*
+exp8 = exp9 {$left ( _ '..' #Consolidated _ $right(exp9)) }*
+exp9 = exp10 {$left ( _ ('+' #Add / '-' #Sub) _ $right(exp10)) }*
+exp10 = exp11 {$left ( _ ('*' #Mul / '/' #Div) _ $right(exp11)) }*
+exp11 = exp12 {$left ( _ ('//' #Div_Int / '%' #Mod) _ $right(exp12)) }*
+exp12 = exps {$left ( _ '^' #Power _ $right(exps)) }*
+exps =  nil / false / true / Numeral / LiteralString / '...' / functiondef /functioncall/
+  prefixexp / '{' fieldlist '}' / { $(unop) _ $(exp) #Unop}
 
-functioncall =  { $(prefixexp) $(args) / $(prefixexp) ':' $(Name) $(args) #Functioncall}
+prefixexp =  ( (Name) / '(' (exp) ')' ) ( '[' $(exp) ']' / '.' $(Name) / $(args) / ':' $(Name) $(args) )*
 
-args =  {('(' $(explist)? ')' / $(tableconstructor) / $(LiteralString)) #Args}
+functioncall =  { $name(funcname) $param(args) #Apply}
 
-functiondef = 'function' funcbody
+args =  {('(' $(explist)? ')' / '{' $(fieldlist) '}' / $(LiteralString)) #List}
 
-funcbody = {'(' $(parlist) ')' $(block) 'end' #Funcbody}
+functiondef = 'function' '(' (parlist) ')' indent $body(block) indent 'end'
 
 parlist = namelist _ (',' '...')? / '...'
 
-tableconstructor = {'{' $(fieldlist)? '}' #Tableconstructor}
+fieldlist = { _ $(field) ( _ fieldsep _ $(field) _ )* ( _ fieldsep)? #Set}
 
-fieldlist = { $(field) ( fieldsep $(field))*  fieldsep? #Fieldlist}
-
-field = '[' _ exp _ ']' _ '=' _ $(exp) / Name _ '=' _ $(exp) / exp
+field = {('[' _ $left(exp) _ ']' _ '=' _ $right(exp) / $left(Name) _ '=' _ $right(exp) )#Assign} / exp
 
 fieldsep = ',' / ';'
 
-binop =  {'+' #Add} / {'-' #Sub} / {'*' #Mul} / {'/' #Div} / '//' / '^' / '%' /
-	{'<=' #LessThanEquals} / {'<' #LessThan} / {'>=' #GreaterThanEquals} / {'>' #GreaterThan} /
-	 '&' / '~' / '/' / '>>' / '<<' / '..' /
-	 {'==' #Equals} / {'!=' #NotEquals} /
-	 and / or
-
-unop = '-' / not / '#' / '~'
+unop = {'-' #Minus} / not / {'#' #Length} / {'~' #Bit_Not}
 
 Name = {([0-9] / [a-z] / [A-Z] / '_')+ #Name}
-Numeral = {([1-9] [0-9]* / '0') #Numeral}
+Numeral = Double / Integer
+Integer = {([1-9] [0-9]* / '0') #Integer}
+Double = {([1-9] [0-9]* / '0') '.' [0-9]+  #Double}
 LiteralString = {('"' $(Name) '"' / '\'' $(char) '\'') #LiteralString}
 char = {([0-9] / [a-z] / '_') #Char}
 
-and = {'and' #And}
-or = {'or' #Or}
 not = {'not' #Not}
 nil = {'nil' #Nil}
 false = {'false' #False}
@@ -82,3 +86,4 @@ return = {'return' #Return}
 
 S = [ \t\n\r]
 _ = S*
+indent = S+
